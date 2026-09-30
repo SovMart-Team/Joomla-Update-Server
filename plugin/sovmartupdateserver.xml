@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="system" method="upgrade">
+    <name>PLG_SYSTEM_SOVMARTUPDATESERVER</name>
+    <author>SovMart</author>
+    <creationDate>2026-09</creationDate>
+    <copyright>(C) 2026 SovMart</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <authorEmail>info@sovmart.ru</authorEmail>
+    <authorUrl>https://sovmart.ru</authorUrl>
+    <version>1.0.0</version>
+    <description>PLG_SYSTEM_SOVMARTUPDATESERVER_XML_DESCRIPTION</description>
+    <namespace path="src">Joomla\Plugin\System\SovmartUpdateServer</namespace>
+    <scriptfile>script.php</scriptfile>
+    <files>
+        <folder plugin="sovmartupdateserver">src</folder>
+        <folder>services</folder>
+        <folder>resources</folder>
+    </files>
+    <languages folder="language">
+        <language tag="en-GB">en-GB/plg_system_sovmartupdateserver.ini</language>
+        <language tag="en-GB">en-GB/plg_system_sovmartupdateserver.sys.ini</language>
+        <language tag="ru-RU">ru-RU/plg_system_sovmartupdateserver.ini</language>
+        <language tag="ru-RU">ru-RU/plg_system_sovmartupdateserver.sys.ini</language>
+    </languages>
+    <config>
+        <fields name="params">
+            <fieldset name="internal">
+                <field name="_backup_complete" type="hidden" filter="integer" />
+                <field name="_backup_update_site_id" type="hidden" filter="integer" />
+                <field name="_backup_update_site_location" type="hidden" filter="raw" />
+                <field name="_backup_update_site_type" type="hidden" filter="cmd" />
+                <field name="_backup_update_site_enabled" type="hidden" filter="integer" />
+                <field name="_backup_tuf_root" type="hidden" filter="raw" />
+                <field name="_backup_component_params" type="hidden" filter="raw" />
+                <field name="_managed_location" type="hidden" filter="raw" />
+            </fieldset>
+        </fields>
+    </config>
+</extension>
