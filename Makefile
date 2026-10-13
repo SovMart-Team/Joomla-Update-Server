@@ -6,6 +6,7 @@ BUILD_DIR := build
 
 package: check
 	mkdir -p $(BUILD_DIR)
+	rm -f $(BUILD_DIR)/$(PACKAGE_NAME).zip
 	cd $(SOURCE_DIR) && zip -qr ../$(BUILD_DIR)/$(PACKAGE_NAME).zip . -x '*.DS_Store'
 
 check:

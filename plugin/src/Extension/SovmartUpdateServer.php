@@ -12,8 +12,8 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\Event\SubscriberInterface;
-use Joomla\Plugin\System\SovmartUpdateServer\Configuration\UpdateServerConfiguration;
-use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerManager;
+use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerConfigurationService;
+use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerManagerService;
 
 final class SovmartUpdateServer extends CMSPlugin implements SubscriberInterface
 {
@@ -22,7 +22,8 @@ final class SovmartUpdateServer extends CMSPlugin implements SubscriberInterface
     public function __construct(
         $subject,
         array $config,
-        private readonly UpdateServerManager $manager
+        private readonly UpdateServerManagerService $manager,
+        private readonly UpdateServerConfigurationService $configuration
     ) {
         parent::__construct($subject, $config);
     }
@@ -42,8 +43,9 @@ final class SovmartUpdateServer extends CMSPlugin implements SubscriberInterface
 
         try {
             $location = $this->manager->apply(
-                UpdateServerConfiguration::REPOSITORY_URL,
-                UpdateServerConfiguration::getTrustedRoot()
+                $this->configuration->getRepositoryUrl(),
+                $this->configuration->getTrustedRoot(),
+                (string) $this->params->get('_managed_location', '')
             );
 
             if ((string) $this->params->get('_managed_location', '') !== $location) {

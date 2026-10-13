@@ -18,8 +18,8 @@ $required = [
     'plugin/services/provider.php',
     'plugin/script.php',
     'plugin/src/Extension/SovmartUpdateServer.php',
-    'plugin/src/Configuration/UpdateServerConfiguration.php',
-    'plugin/src/Service/UpdateServerManager.php',
+    'plugin/src/Service/UpdateServerConfigurationService.php',
+    'plugin/src/Service/UpdateServerManagerService.php',
     'plugin/resources/root.json',
 ];
 

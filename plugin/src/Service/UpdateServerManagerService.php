@@ -10,7 +10,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
 use Joomla\Registry\Registry;
 
-final class UpdateServerManager
+final class UpdateServerManagerService
 {
     public const MAX_ROOT_BYTES = 1024 * 1024;
 
@@ -40,22 +40,30 @@ final class UpdateServerManager
         $params->set('_backup_component_params', base64_encode((string) $componentParams));
     }
 
-    public function apply(string $repositoryUrl, string $trustedRoot): string
+    public function apply(
+        string $repositoryUrl,
+        string $trustedRoot,
+        ?string $previousManagedLocation = null
+    ): string
     {
-        $location       = self::normalizeRepositoryUrl($repositoryUrl);
+        $location        = self::normalizeRepositoryUrl($repositoryUrl);
         $coreExtensionId = $this->getCoreExtensionId();
         $updateSite      = $this->getCoreUpdateSite($coreExtensionId);
 
         self::validateTrustedRoot($trustedRoot);
 
-        $actualSha256 = hash('sha256', $trustedRoot);
+        $updateSiteId          = (int) $updateSite->update_site_id;
+        $currentRoot           = $this->getStoredRoot($updateSiteId);
+        $locationChanged       = (string) $updateSite->location !== $location
+            || (string) $updateSite->type !== 'tuf';
+        $rootBootstrapRequired = self::requiresTrustedRootBootstrap(
+            (string) $updateSite->location,
+            (string) $updateSite->type,
+            $currentRoot,
+            $previousManagedLocation
+        );
 
-        $updateSiteId  = (int) $updateSite->update_site_id;
-        $currentRoot   = $this->getStoredRoot($updateSiteId);
-        $locationChanged = (string) $updateSite->location !== $location || (string) $updateSite->type !== 'tuf';
-        $rootChanged     = $currentRoot === null || !hash_equals(hash('sha256', $currentRoot), $actualSha256);
-
-        if ($locationChanged || $rootChanged || (int) $updateSite->enabled !== 1) {
+        if ($locationChanged || $rootBootstrapRequired || (int) $updateSite->enabled !== 1) {
             $this->database->transactionStart();
 
             try {
@@ -67,7 +75,12 @@ final class UpdateServerManager
                 $site->last_check_timestamp = 0;
                 $this->database->updateObject('#__update_sites', $site, 'update_site_id');
 
-                $this->storeTrustedRoot($updateSiteId, $trustedRoot);
+                if ($rootBootstrapRequired) {
+                    $this->storeTrustedRoot($updateSiteId, $trustedRoot);
+                } elseif ($locationChanged) {
+                    $this->clearTrustedMetadata($updateSiteId);
+                }
+
                 $this->clearCoreUpdateCache($coreExtensionId, $updateSiteId);
                 $this->setComponentChannel($location);
                 $this->database->transactionCommit();
@@ -80,6 +93,29 @@ final class UpdateServerManager
         }
 
         return $location;
+    }
+
+    public static function requiresTrustedRootBootstrap(
+        string $currentLocation,
+        string $currentType,
+        ?string $currentRoot,
+        ?string $previousManagedLocation
+    ): bool
+    {
+        if ($currentRoot === null || $currentRoot === '' || $currentType !== 'tuf') {
+            return true;
+        }
+
+        if ($previousManagedLocation === null || trim($previousManagedLocation) === '') {
+            return true;
+        }
+
+        try {
+            return self::normalizeRepositoryUrl($previousManagedLocation)
+                !== self::normalizeRepositoryUrl($currentLocation);
+        } catch (\InvalidArgumentException) {
+            return true;
+        }
     }
 
     public function restore(Registry $params): bool
@@ -324,6 +360,19 @@ final class UpdateServerManager
             ->set($this->database->quoteName('mirrors') . ' = NULL')
             ->where($this->database->quoteName('update_site_id') . ' = :id')
             ->bind(':root', $trustedRoot, ParameterType::LARGE_OBJECT)
+            ->bind(':id', $updateSiteId, ParameterType::INTEGER);
+        $this->database->setQuery($query)->execute();
+    }
+
+    private function clearTrustedMetadata(int $updateSiteId): void
+    {
+        $query = $this->database->getQuery(true)
+            ->update($this->database->quoteName('#__tuf_metadata'))
+            ->set($this->database->quoteName('targets') . ' = NULL')
+            ->set($this->database->quoteName('snapshot') . ' = NULL')
+            ->set($this->database->quoteName('timestamp') . ' = NULL')
+            ->set($this->database->quoteName('mirrors') . ' = NULL')
+            ->where($this->database->quoteName('update_site_id') . ' = :id')
             ->bind(':id', $updateSiteId, ParameterType::INTEGER);
         $this->database->setQuery($query)->execute();
     }

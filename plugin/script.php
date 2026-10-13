@@ -5,7 +5,6 @@ declare(strict_types=1);
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\AdministratorApplication;
-use Joomla\CMS\Factory;
 use Joomla\CMS\Installer\InstallerAdapter;
 use Joomla\CMS\Installer\InstallerScriptInterface;
 use Joomla\CMS\Language\Text;
@@ -13,29 +12,47 @@ use Joomla\CMS\Version;
 use Joomla\Database\DatabaseInterface;
 use Joomla\DI\Container;
 use Joomla\DI\ServiceProviderInterface;
-use Joomla\Plugin\System\SovmartUpdateServer\Configuration\UpdateServerConfiguration;
-use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerManager;
+use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerConfigurationService;
+use Joomla\Plugin\System\SovmartUpdateServer\Service\UpdateServerManagerService;
 use Joomla\Registry\Registry;
 
-if (!class_exists(UpdateServerManager::class)) {
-    require_once __DIR__ . '/src/Service/UpdateServerManager.php';
+if (!class_exists(UpdateServerManagerService::class)) {
+    require_once __DIR__ . '/src/Service/UpdateServerManagerService.php';
 }
 
-if (!class_exists(UpdateServerConfiguration::class)) {
-    require_once __DIR__ . '/src/Configuration/UpdateServerConfiguration.php';
+if (!class_exists(UpdateServerConfigurationService::class)) {
+    require_once __DIR__ . '/src/Service/UpdateServerConfigurationService.php';
 }
 
 return new class () implements ServiceProviderInterface {
     public function register(Container $container): void
     {
+        $container->share(
+            UpdateServerConfigurationService::class,
+            static fn (): UpdateServerConfigurationService => new UpdateServerConfigurationService()
+        );
+
+        $container->share(
+            UpdateServerManagerService::class,
+            static fn (Container $container): UpdateServerManagerService => new UpdateServerManagerService(
+                $container->get(DatabaseInterface::class)
+            )
+        );
+
         $container->set(
             InstallerScriptInterface::class,
-            new class ($container->get(AdministratorApplication::class)) implements InstallerScriptInterface {
-                private DatabaseInterface $database;
-
-                public function __construct(private readonly AdministratorApplication $application)
-                {
-                    $this->database = Factory::getContainer()->get(DatabaseInterface::class);
+            new class (
+                $container->get(AdministratorApplication::class),
+                $container->get(DatabaseInterface::class),
+                $container->get(UpdateServerManagerService::class),
+                $container->get(UpdateServerConfigurationService::class)
+            ) implements InstallerScriptInterface {
+                public function __construct(
+                    private readonly AdministratorApplication $application,
+                    private readonly DatabaseInterface $database,
+                    private readonly UpdateServerManagerService $manager,
+                    private readonly UpdateServerConfigurationService $configuration
+                ) {
                 }
 
                 public function install(InstallerAdapter $adapter): bool
@@ -52,7 +69,7 @@ return new class () implements ServiceProviderInterface {
                 {
                     try {
                         $params = $this->loadPluginParams();
-                        $this->manager()->restore($params);
+                        $this->manager->restore($params);
                     } catch (\Throwable $exception) {
                         $this->application->enqueueMessage(
                             Text::sprintf(
@@ -97,10 +114,9 @@ return new class () implements ServiceProviderInterface {
 
                     $plugin = $this->loadPluginRecord();
                     $params = new Registry((string) ($plugin->params ?? ''));
-                    $manager = $this->manager();
 
                     try {
-                        $manager->captureBackup($params);
+                        $this->manager->captureBackup($params);
                     } catch (\Throwable $exception) {
                         $this->application->enqueueMessage(
                             Text::sprintf(
@@ -120,12 +136,13 @@ return new class () implements ServiceProviderInterface {
                     $this->database->updateObject('#__extensions', $record, 'extension_id');
 
                     try {
-                        $location = $manager->apply(
-                            UpdateServerConfiguration::REPOSITORY_URL,
-                            UpdateServerConfiguration::getTrustedRoot()
+                        $location = $this->manager->apply(
+                            $this->configuration->getRepositoryUrl(),
+                            $this->configuration->getTrustedRoot(),
+                            (string) $params->get('_managed_location', '')
                         );
                         $params->set('_managed_location', $location);
-                        $manager->savePluginParams($params);
+                        $this->manager->savePluginParams($params);
                     } catch (\Throwable $exception) {
                         $this->application->enqueueMessage(
                             Text::sprintf(
@@ -139,11 +156,6 @@ return new class () implements ServiceProviderInterface {
                     }
 
                     return true;
-                }
-
-                private function manager(): UpdateServerManager
-                {
-                    return new UpdateServerManager($this->database);
                 }
 
                 private function loadPluginParams(): Registry
