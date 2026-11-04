@@ -80,10 +80,12 @@ assertSameValue(
 assertSameValue(
     true,
     UpdateServerManagerService::requiresTrustedRootBootstrap(
-        'https://tuf.sovmart.ru/',
+        'https://sovmart.ru/updates/49/28/'
+            . '4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/',
         'tuf',
         null,
-        'https://tuf.sovmart.ru/'
+        'https://sovmart.ru/updates/49/28/'
+            . '4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/'
     ),
     'a missing persisted root must be restored from the plugin bundle'
 );
@@ -93,7 +95,8 @@ assertSameValue(
         'https://example.test/tampered/',
         'tuf',
         '{"signed":{"version":2}}',
-        'https://tuf.sovmart.ru/'
+        'https://sovmart.ru/updates/49/28/'
+            . '4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/'
     ),
     'a channel changed outside the plugin must be bootstrapped again'
 );
@@ -134,7 +137,7 @@ assertSameValue(
     'bundled trusted root fingerprint must stay pinned'
 );
 assertSameValue(
-    'https://dev.sovmart.ru/updates/49/28/'
+    'https://sovmart.ru/updates/49/28/'
         . '4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/',
     UpdateServerManagerService::normalizeRepositoryUrl($configuration->getRepositoryUrl()),
     'bundled repository URL must be valid'

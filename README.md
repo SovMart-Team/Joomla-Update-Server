@@ -22,7 +22,7 @@ The installable archive is written to `build/plg_system_sovmartupdateserver.zip`
 2. Open **Components → Joomla Update** and select **Check for Updates**.
 
 The canonical UUID repository URL
-(`https://dev.sovmart.ru/updates/49/28/4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/`)
+(`https://sovmart.ru/updates/49/28/4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/`)
 and offline-signed trusted `root.json` are bundled with the plugin. Installation
 enables the plugin, stores the trust anchor and switches Joomla's native core
 update channel immediately. There are no user settings.

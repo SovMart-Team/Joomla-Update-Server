@@ -8,7 +8,7 @@ defined('_JEXEC') or die;
 
 final class UpdateServerConfigurationService
 {
-    public const REPOSITORY_URL = 'https://dev.sovmart.ru/updates/49/28/'
+    public const REPOSITORY_URL = 'https://sovmart.ru/updates/49/28/'
         . '4928b7d5-3788-415c-8c9a-13f2a69cfdf5/joomla-core-tuf/';
 
     public function getRepositoryUrl(): string
